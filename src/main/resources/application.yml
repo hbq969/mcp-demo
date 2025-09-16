@@ -1,0 +1,132 @@
+spring:
+  application:
+    name: demo
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    dynamic:
+      enabled: true
+      base-packages: com.github.hbq969
+      default-lookup-key: hikari
+    hikari:
+      jdbc-url: jdbc:h2:mem:local
+      driver-class-name: org.h2.Driver
+      username: foo
+      password: bar
+      maximum-pool-size: 20
+      minimum-idle: 5
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+  mvc:
+    interceptors:
+      mdc:
+        enabled: true
+      resource-handler-registry:
+        entries:
+          - handlers: /hbq969-common/**
+            locations: classpath:/static/hbq969-common/
+          - handlers: /hbq969-dict/**
+            locations: classpath:/static/hbq969-dict/
+          - handlers: /hbq969-sm/**
+            locations: classpath:/static/hbq969-sm/
+          - handlers: /mcp-ui/**
+            locations: classpath:/static/mcp-ui/
+        enabled: true
+      login:
+        enabled: true
+        cookie-max-age-sec: 1800
+        dialect: embedded
+        include-urls:
+          - "/**"
+        exclude-urls:
+          - "/**/*.js"
+          - "/**/*.css"
+          - "/**/*.png"
+          - "/**/*.jpg"
+          - "/**/*.map"
+          - "/**/*.ico"
+          - "/**/error"
+          - "/common/health"
+          - "/hbq969-sm/index.html"
+          - "/hbq969-sm/**/login"
+          - "/hbq969-sm/i18n/lang"
+          - "/hbq969-sm/i18n/lang/data"
+          - "/hbq969-sm/**/getPublicKey"
+        sm-initial-script:
+          language: zh-CN
+          charset: utf-8
+        auth:
+          base:
+            enabled: true
+          sm:
+            enabled: true
+            header-prefix: Bearer
+        session-key: demo-sid
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  ai:
+#    ollama:
+#      base-url: http://localhost:11434
+#      chat:
+#        options:
+#          model: qwen3:8b
+    openai:
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+      api-key: ${DeepSeek-API-Key}
+    mcp:
+      server:
+        enabled: true
+        name: book-management-server
+        version: 1.0.0
+        type: sync
+        instructions: |
+          你是一个图书管理助手，必须优先使用以下工具查询图书：
+          - findBooksByAuthor: 当用户询问作者相关图书时使用
+          - findBooksByTitle: 当标题模糊匹配时使用
+          - findBooksByCategory: 当涉及分类时使用
+          回复时请整理为表格格式。
+        capabilities:
+          tool: true
+          resource: true
+          prompt: true
+          completion: true
+        sse-message-endpoint: /mcp/message
+        stdio: false
+        sse-endpoint: /sse
+
+server:
+  servlet:
+    context-path: /demo
+    session:
+      cookie:
+        http-only: true
+        max-age: ${spring.mvc.interceptors.login.cookie-max-age-sec}
+        secure: false
+        same-site: strict
+        path: /
+        name: demo-sid
+      timeout: 30m
+mybatis:
+  mapper-locations:
+    - classpath*:mappers/*.xml
+    - classpath*:**/mapper/common/*Mapper.xml
+    - classpath*:**/mapper/embedded/*Mapper.xml
+dict:
+  enabled: true
+encrypt:
+  config:
+    enabled: true
+  restful:
+    enabled: true
+    aes:
+      show-log: true
+      key: ENC(PhsjjLFsZX5eNgvGh72ZGbf4boGXwdrpzb+od/vfPQ13lBgjil9MU/rdrigeweDcHFpYCEZPe241Xn81rWpHsg==)
+      iv: ENC(Avu8L7a3mG/3dD8zSrQLEcSguU51vOS0KGluDsRakOttDyZJBRpC0l313nXRmFQ65lVMO5nJDKzho25mKRz8zg==)
+      charset: utf-8
+    rsa:
+      show-log: true
+      private-key: MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBALHgTsfwX1e0VnNN3cago1lPO5Nd7Ax1kqh97enaEp9zq4/bThseiZBdwOnjZ+CrQjbowTAftfnZKoZJUfM/akTjruRbSbBVi1/wai+DkYaa8S8DAMMmK1Gv09DTEkrMjn5f3IJKYcNFCzWqUvEhMHVzRML02gOlt+XXUO3B7LNbAgMBAAECgYBm4RaPu65ZWruZqxK3fFeeIx6RCISrXCE8BMHjPLcCtHMpHC2br9jev+sBG/8LyeHdQlfiTqUA4iMfUi7s4uPCBcrDkjTEg0uAxiVcaMU5q8rC4oBxtaFGpqRVbTMI8/Acgix51Y0uSBYNteAAZ26xKitZeOkZxO3IIUTokpBoOQJBAPDVWipZKchH0d0CxKZPT1W29iXJR9SFXTSY8jMOJmCYRkuff/SM1fZtR987dhy7bx1LngH7bmJsuAr1VpkE/6UCQQC9E/ozsVpm+9EB8daLeTcbs92c3XCKHAkG2Y+86YnPEMdIfDlUqBAnjs8EXzyru5cktv521xTy2KfTAoss7Hb/AkEAjlAVCudLeG1wRyCmofxFzknipKuPhbcVP8qNfLwE05nIGFH1Y8aBfTBQg0p43juoSnBvu44fSYwjKV6WwK+ifQJAL6TTDSeJgh2+AuFvkGGQ81gVZaue6g46cBFuWMn4QccWkDtNLvnSaEViANYGsbdpVIUQBd4Yl0DkuRURANbs/QJBAO1fRoNzliNdujwD81WBLL4pyy/v2/12vzVeB4HRdFBmnwiKM3SMA1rjvChwvKTfLpLUukNtE5y2VXtFETfjMZA=
+      charset: utf-8
+      public-key: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCx4E7H8F9XtFZzTd3GoKNZTzuTXewMdZKofe3p2hKfc6uP204bHomQXcDp42fgq0I26MEwH7X52SqGSVHzP2pE467kW0mwVYtf8Govg5GGmvEvAwDDJitRr9PQ0xJKzI5+X9yCSmHDRQs1qlLxITB1c0TC9NoDpbfl11DtweyzWwIDAQAB

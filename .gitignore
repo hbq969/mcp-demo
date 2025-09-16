@@ -1,0 +1,5 @@
+.idea
+.mvn
+logs
+target
+src/main/resource/static/node_modules

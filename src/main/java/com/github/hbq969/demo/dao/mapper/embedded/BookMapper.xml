@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.github.hbq969.demo.dao.BookRepository">
+
+    <update id="createBooks">
+        CREATE TABLE books
+        (
+            id               NUMERIC(20) PRIMARY KEY,
+            title            VARCHAR(255) NOT NULL,
+            category         VARCHAR(255) NOT NULL,
+            author           VARCHAR(255) NOT NULL,
+            publication_date DATE,
+            isbn             VARCHAR(255)
+        )
+    </update>
+</mapper>
