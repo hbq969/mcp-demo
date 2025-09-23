@@ -1,19 +1,23 @@
 package com.github.hbq969.demo.ctrl;
 
+import cn.hutool.core.util.ArrayUtil;
 import com.github.hbq969.code.common.restful.ReturnMessage;
-import com.github.hbq969.demo.dao.entity.Book;
-import com.github.hbq969.demo.model.ChatRequest;
-import com.github.hbq969.demo.service.BookService;
+import com.github.hbq969.demo.model.ImportModel;
+import com.github.hbq969.demo.service.KnowledgeService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.vectorstore.mariadb.MariaDBVectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Tag(name = "AI接口")
 @RequestMapping(path = {"/ai", "/mcp-ui"})
@@ -21,39 +25,23 @@ import java.util.List;
 @Slf4j
 public class ChatCtrl {
 
-    private final ChatClient chatClient;
-    private final BookService bookService;
+    @Autowired
+    private MariaDBVectorStore vectorStore;
 
-    public ChatCtrl(ChatClient.Builder builder, BookService bookService) {
-        logToolMethods(bookService.getClass());
-        this.chatClient = builder.defaultTools(bookService).build();
-        this.bookService = bookService;
-    }
+    @Autowired
+    @Qualifier("mcp-chatClient")
+    private ChatClient mcpChatClient;
 
-    @RequestMapping(path = "/chat", method = RequestMethod.POST)
-    @ResponseBody
-    public ReturnMessage<?> mcpChat(
-            @RequestBody ChatRequest request) {
-        try {
-            String userMessage = request.getMessage();
-            String content = chatClient.prompt()
-                    .user(userMessage)
-                    .call()
-                    .content();
-            return ReturnMessage.success(content);
-        } catch (Exception e) {
-            log.error("", e);
-            return ReturnMessage.fail("处理请求时出错: " + e.getMessage());
-        }
-    }
+    @Autowired
+    private KnowledgeService knowledgeService;
 
-    @GetMapping(path = "/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> mcpChatSSE(@RequestParam(name = "message") String message) {
+    @GetMapping(path = "/mcp/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> mcpChat(@RequestParam(name = "message") String message) {
         String userMessage = message;
 
         return Flux.create(sink -> {
             try {
-                chatClient.prompt()
+                mcpChatClient.prompt()
                         .user(userMessage)
                         .stream()
                         .chatResponse().doOnNext(response -> {
@@ -75,10 +63,44 @@ public class ChatCtrl {
         });
     }
 
-    @RequestMapping(path = "/books", method = RequestMethod.GET)
+    @GetMapping(path = "/rag/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> ragChat(@RequestParam(name = "message") String message) {
+        String userMessage = message;
+
+        return Flux.create(sink -> {
+            try {
+                knowledgeService.getChatClient().prompt()
+                        .user(userMessage)
+                        .advisors(new QuestionAnswerAdvisor(vectorStore))
+                        .stream()
+                        .chatResponse().doOnNext(response -> {
+                            String chunk = response.getResult().getOutput().getText();
+                            if (chunk != null && !chunk.isEmpty()) {
+                                sink.next(chunk);
+                            }
+                        })
+                        .doOnComplete(() -> {
+                            sink.complete();
+                        })
+                        .doOnError(error -> {
+                            sink.error(error);
+                        })
+                        .subscribe();
+            } catch (Exception e) {
+                log.error("", e);
+            }
+        });
+    }
+
+    @RequestMapping(path = "/knowledge/import", method = RequestMethod.POST, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseBody
-    public ReturnMessage<List<Book>> queryBooks() {
-        return ReturnMessage.success(bookService.findBooksByAuthor(""));
+    public ReturnMessage<?> importKnowledge(@RequestParam("defaultSystem") String defaultSystem,
+                                            @RequestParam("files") MultipartFile[] files) {
+        ImportModel model = ImportModel.builder()
+                .files(files).defaultSystem(defaultSystem)
+                .build();
+        knowledgeService.importKnowledge(model);
+        return ReturnMessage.success("导入成功");
     }
 
     private void logToolMethods(Class<?> clazz) {
