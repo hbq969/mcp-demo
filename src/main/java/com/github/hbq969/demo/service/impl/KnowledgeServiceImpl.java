@@ -5,7 +5,6 @@ import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.hbq969.demo.dao.RagRepository;
 import com.github.hbq969.demo.model.ImportModel;
-import com.github.hbq969.demo.model.ReaderModel;
 import com.github.hbq969.demo.service.KnowledgeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -17,6 +16,7 @@ import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.mariadb.MariaDBVectorStore;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +26,7 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class KnowledgeServiceImpl implements KnowledgeService {
+public class KnowledgeServiceImpl implements KnowledgeService, InitializingBean {
 
     @Autowired
     private MariaDBVectorStore vectorStore;
@@ -41,6 +41,11 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private ChatClient.Builder builder;
 
     private volatile ChatClient chatClient;
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        this.chatClient = builder.defaultSystem("你是一个人工智能助手,需要对用户提出的问题作出回答").build();
+    }
 
     @Override
     public void importKnowledge(ImportModel model) {
