@@ -10,4 +10,5 @@ insert into books(id,title,category,author,publication_date,isbn) values (9,'Red
 insert into books(id,title,category,author,publication_date,isbn) values (10,'深入浅出Docker','容器技术','王五','2022-11-20','9787123456789');
 
 insert into h_menus(app,name,menu_desc,url,parent_key,order_index,menu_level,icon_name,created_at) values('demo','MCP','人工智能','/mcp','-',0,1,'AI1',1735800456);
-insert into h_menus(app,name,menu_desc,url,parent_key,order_index,menu_level,icon_name,created_at) values('demo','mcp_demo','MCP演示','inner:/demo/mcp-ui/index.html','MCP',0,2,'AI2',1735800456);
+insert into h_menus(app,name,menu_desc,url,parent_key,order_index,menu_level,icon_name,created_at) values('demo','mcp_demo','MCP演示','inner:/demo/mcp-ui/index.html#/mcp','MCP',0,2,'AI2',1735800456);
+insert into h_menus(app,name,menu_desc,url,parent_key,order_index,menu_level,icon_name,created_at) values('demo','RAG','RAG演示','inner:/demo/mcp-ui/index.html#/rag','MCP',1,2,'HAProxyIcon',1735800456);
