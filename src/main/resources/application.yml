@@ -105,7 +105,7 @@ spring:
       mariadb:
         initialize-schema: true
         distance-type: cosine
-        dimensions: 3584
+        dimensions: 768
   servlet:
     multipart:
       max-request-size: 1000MB
